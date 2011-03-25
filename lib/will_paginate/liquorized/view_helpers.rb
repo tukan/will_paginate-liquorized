@@ -8,6 +8,7 @@ module WillPaginate::Liquorized
       opts[:next_label]     = next_label if next_label      
       opts[:params]         = {:anchor => anchor} if anchor
       opts[:controller]     = @context.registers[:controller]
+      opts[:site]           = @context['site']
 
       collection = collection.source if collection.respond_to? :source
 
@@ -36,6 +37,24 @@ module WillPaginate::Liquorized
     def to_html
       return "<p><strong style=\"color:red;\">(Will Paginate Liquorized) Error:</strong> you must pass a controller in Liquor render call; <br/>
               e.g. Liquor::Template.parse(\"{{ movies | will_paginate_liquid }}\").render({'movies' => @movies}, :registers => {:controller => @controller})</p>" unless @options[:controller]
+      
+      # If there is a will_paginte template then using to it for rendering. 
+      if @options[:site]
+        site = @options[:site].source
+        template = site.html_templates.find_by_name("_pagination")
+        if template
+          assigns = { 'total_pages' => @collection.total_pages, 
+                      'current_page' => @collection.current_page, 
+                      'prev_page_link' => page_link_or_span(@collection.previous_page, 'disabled prev_page', @options[:previous_label]),
+                      'next_page_link' =>  page_link_or_span(@collection.next_page,     'disabled next_page', @options[:next_label]),
+                      'prev_page_url' => url_for_page(@collection.previous_page),
+                      'next_page_url' => url_for_page(@collection.next_page),
+                      'links' => windowed_links,
+                      'site' => site }
+                      
+          return template.render({}, assigns)
+        end
+      end
       
       
       links = @options[:page_links] ? windowed_links : []
